@@ -3,6 +3,7 @@ package com.fasterxml.jackson.dataformat.smile;
 import java.io.*;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 import com.fasterxml.jackson.core.*;
@@ -2398,36 +2399,12 @@ currentToken(), firstCh);
         if ((_inputEnd - _inputPtr) < len) {
             _loadToHaveAtLeast(len);
         }
-        // Note: we count on fact that buffer must have at least 'len' (<= 64) empty char slots
-        final char[] outBuf = _textBuffer.emptyAndGetCurrentSegment();
-        int outPtr = 0;
-        final byte[] inBuf = _inputBuffer;
-        int inPtr = _inputPtr;
 
-        // 29-Mar-2021, tatu: Still true with Java 8 / Jackson 2.13: unrolling
-        //   does NOT appear to help here -- slows things down by 5% (for one test)
-        /*
-        for (int inEnd = inPtr + len - 3; inPtr < inEnd; ) {
-            outBuf[outPtr++] = (char) inBuf[inPtr++];
-            outBuf[outPtr++] = (char) inBuf[inPtr++];
-            outBuf[outPtr++] = (char) inBuf[inPtr++];
-            outBuf[outPtr++] = (char) inBuf[inPtr++];
-        }
-        switch (len & 3) {
-        case 3:
-            outBuf[outPtr++] = (char) inBuf[inPtr++];
-        case 2:
-            outBuf[outPtr++] = (char) inBuf[inPtr++];
-        case 1:
-            outBuf[outPtr++] = (char) inBuf[inPtr++];
-        case 0:
-        }*/
-
-        for (final int end = inPtr + len; inPtr < end; ++inPtr) {
-            outBuf[outPtr++] = (char) inBuf[inPtr];            
-        }
-        _inputPtr = inPtr;
-        return _textBuffer.setCurrentAndReturn(len);
+        final int inPtr = _inputPtr;
+        _inputPtr = inPtr + len;
+        String str = new String(_inputBuffer, inPtr, len, StandardCharsets.US_ASCII);
+        _textBuffer.resetWithString(str);
+        return str;
     }
 
     protected final String _decodeShortUnicodeValue(final int byteLen) throws IOException
